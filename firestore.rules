@@ -1,0 +1,62 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users can only read and update their own profile.
+    match /users/{userId} {
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
+    }
+
+    // A user can manage their own farm documents.
+    match /farms/{farmId} {
+      allow read, write, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+
+    // A user can manage their own crop plans.
+    match /cropPlans/{planId} {
+       allow read, write, create, delete: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+    
+    // A user can manage their own diagnosis reports.
+    match /diagnosisReports/{reportId} {
+      allow read, write, create, delete: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+
+    // A user can manage their own market alerts.
+     match /marketAlerts/{alertId} {
+      allow read, write, create, delete: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+
+    // Rules for the Community feature
+    match /communityPosts/{postId} {
+      // Any authenticated user can read posts.
+      allow read: if request.auth != null;
+      
+      // Users can only create posts for themselves.
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+
+      // Users can only update the 'likedBy' and 'likesCount' fields (for liking)
+      // and 'commentsCount'. They cannot edit the content of other's posts.
+      // They can edit their own posts fully.
+      allow update: if request.auth != null && (
+        (request.auth.uid == resource.data.userId) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'likesCount', 'commentsCount']))
+      );
+      
+      // Users can only delete their own posts.
+      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+
+      // Rules for comments subcollection
+      match /comments/{commentId} {
+        // Any authenticated user can read comments and add new ones.
+        allow read, create: if request.auth != null;
+        
+        // Users can only update or delete their own comments.
+        allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      }
+    }
+  }
+}

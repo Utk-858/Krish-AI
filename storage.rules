@@ -1,0 +1,16 @@
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Rules for the community feature
+    match /community-images/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rules for the storage test page
+    match /test-uploads/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
